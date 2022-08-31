@@ -1,32 +1,41 @@
-setwd('/Users/macbook/Documents')
-##
-## I simply set the input x as a matrix
-## and then set the solved value "s" as a null
-## then I changed every reference to "mean" to "solve"
-makeCacheMatrix <- function(x = matrix(sample(1:100,9),3,3)) {
-  s <- NULL
+## Put comments here that give an overall description of what your
+## functions do
+
+## Write a short comment describing this function
+## Assume we have a matrix M to find its inverse
+## cacheMetrix <- makeCacheMatrix(M) provides four functions: set() set the matrix; get() get the matrix;
+## setInverse() set the inverse matrix; getInverse() get the inverse matrix
+
+makeCacheMatrix <- function(x = matrix()) {
+## cacheSolve(cacheMetrix) calculates the inverse of the matrix M and save it into cacheMetrix
+## And if the inverse already exists in cacheMetrix, then the funciton will directly get it
+
+makeCacheMatrix <- function(x = matrix()) {
+  iv <- NULL
   set <- function(y) {
     x <<- y
-    s <<- NULL
+    iv <<- NULL
   }
   get <- function() x
-  
-  setsolve <- function(solve) s <<- solve
-  getsolve <- function() s
+  setInverse <- function(inverse) iv <<- inverse
+  getInverse <- function() iv
   list(set = set, get = get,
-       setsolve = setsolve,
-       getsolve = getsolve)
+       setInverse = setInverse,
+       getInverse = getInverse)
 }
-##
-## Same here, changed "mean" to "solve" and "m" to "s"
+
+
+## Write a short comment describing this function
+
 cacheSolve <- function(x, ...) {
-  s <- x$getsolve()
-  if(!is.null(s)) {
-    message("getting inversed matrix")
-    return(s)
+        ## Return a matrix that is the inverse of 'x'
+  iv <- x$getInverse()
+  if(!is.null(iv)) {
+    message("getting cached data")
+    return(iv)
   }
   data <- x$get()
-  s <- solve(data, ...)
-  x$setsolve(s)
-  s
+  iv <- solve(data, ...)
+  x$setInverse(iv)
+  return(iv)
 }
