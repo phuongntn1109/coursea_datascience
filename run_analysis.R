@@ -1,57 +1,51 @@
-###This code conducts the necessary R work to generate the course project for
-###the Gettinga and Cleaning Data Coursera class
+library(reshape2)
 
-setwd("C:/Coursea/Getting and Cleaning Data")
+filename <- "getdata_projectfiles_UCI HAR Dataset.zip"
 
-#import headers, table keys, etc
-header <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/features.txt",
-                     stringsAsFactors = FALSE)
-header <- header[,-1]
-activity_labels <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/activity_labels.txt")
+#To download and unzip the dataset if it's not already downloaded in the directory
+if (!file.exists(filename)){
+  fileURL <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip "
+  download.file(fileURL, filename, method="curl")
+}  
+if (!file.exists("UCI HAR Dataset")) { 
+  unzip(filename) 
+}
 
-#import test data
-test <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/test/X_test.txt",
-                   header = FALSE,col.names =header)
-test$Group <- "Test"
-activity_test <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/test/y_test.txt",
-                   header = FALSE)
-activity_test <- activity_test[,1]
-test$activity_key <- activity_test
-subject_key <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/test/subject_test.txt",
-                            header = FALSE)
-subject_key <- subject_key[,1]
-test$subject_key <- subject_key
+#To load activity labels and features
+activityLabels <- read.table("UCI HAR Dataset/activity_labels.txt")
+activityLabels[,2] <- as.character(activityLabels[,2])
+features <- read.table("UCI HAR Dataset/features.txt")
+features[,2] <- as.character(features[,2])
 
-#import train data
-train <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/train/X_train.txt",
-                   header = FALSE,col.names =header)
-train$Group <- "train"
-activity_train <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/train/y_train.txt",
-                            header = FALSE)
-activity_train <- activity_train[,1]
-#makes it into a vector from a dataframe
-train$activity_key <- activity_train
-subject_key_train <- read.table("C:/Coursea/Getting and Cleaning Data/UCI HAR Dataset/train/subject_train.txt",
-                          header = FALSE)
-#makes it into a vector from a dataframe
-subject_key_train <- subject_key_train[,1]
-train$subject_key <- subject_key_train
+#To extract only the required data on mean and standard deviation
+reqfeatures <- grep(".*mean.*|.*std.*", features[,2])
+reqfeatures.names <- features[reqfeatures,2]
+reqfeatures.names = gsub('-mean', 'Mean', reqfeatures.names)
+reqfeatures.names = gsub('-std', 'Std', reqfeatures.names)
+reqfeatures.names <- gsub('[-()]', '', reqfeatures.names)
 
-#Join test/train and use lookup tables on key values
-data <-rbind(train,test)
-data <- merge(x = data,y = activity_labels,by.x="activity_key",by.y="V1", all.x=TRUE)
-#extract columns which have "std" or "mean"
-library(base)
-keep <- apply(cbind(grepl("std",header[1:50]), grepl("mean",header[1:50])),1,any)
-##keep only "mean" and "std" columns
-data_red <- data[,keep]
-#add back last three columns from dataset which are group, activity, and subject
-data_red <- cbind(data[,563:565],data_red)
-colnames(data_red)[3] <- "activity_label"
 
-###Summarizes data by activity and subject
-library(doBy)
-avg <- summaryBy(. ~ subject_key + activity_label, data = data_red[,-c(1,4)], FUN = mean)
+#To load the datasets
+train <- read.table("UCI HAR Dataset/train/X_train.txt")[reqfeatures]
+trainActivities <- read.table("UCI HAR Dataset/train/Y_train.txt")
+trainSubjects <- read.table("UCI HAR Dataset/train/subject_train.txt")
+train <- cbind(trainSubjects, trainActivities, train)
 
-#output avg
-avg
+test <- read.table("UCI HAR Dataset/test/X_test.txt")[reqfeatures]
+testActivities <- read.table("UCI HAR Dataset/test/Y_test.txt")
+testSubjects <- read.table("UCI HAR Dataset/test/subject_test.txt")
+test <- cbind(testSubjects, testActivities, test)
+
+#To merge datasets and add labels
+allData <- rbind(train, test)
+colnames(allData) <- c("subject", "activity", reqfeatures.names)
+
+#To turn activities & subjects into factors
+allData$activity <- factor(allData$activity, levels = activityLabels[,1], labels = activityLabels[,2])
+allData$subject <- as.factor(allData$subject)
+
+allData.melted <- melt(allData, id = c("subject", "activity"))
+allData.mean <- dcast(allData.melted, subject + activity ~ variable, mean)
+
+#To create the required tidy.txt file
+write.table(allData.mean, "tidy.txt", row.names = FALSE, quote = FALSE)
